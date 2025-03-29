@@ -1,15 +1,26 @@
 <template>
-  <img alt="Vue logo" src="./assets/logo.png">
-  <HelloWorld msg="Welcome to Your Vue.js App"/>
+  <div id="app">
+    <h1 class="title">Vast Challenge 2023 MC1</h1>
+    <div class="container">
+      <div class="left-panel">
+        <FilterPanel />
+      </div>
+      <div class="right-panel">
+        <ForceDirectedGraph />
+      </div>
+    </div>
+  </div>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
+import FilterPanel from './components/FilterPanel.vue'
+import ForceDirectedGraph from './components/FDG.vue'
 
 export default {
   name: 'App',
   components: {
-    HelloWorld
+    FilterPanel,
+    ForceDirectedGraph
   }
 }
 </script>
@@ -21,6 +32,32 @@ export default {
   -moz-osx-font-smoothing: grayscale;
   text-align: center;
   color: #2c3e50;
-  margin-top: 60px;
+}
+
+.title {
+  height: 60px;
+  line-height: 60px;
+  margin: 0;
+  background-color: #2c3e50;
+  color: white;
+  font-size: 24px;
+}
+
+.container {
+  display: flex;
+  min-height: 100vh;
+}
+
+.left-panel {
+  flex: 1;
+  background-color: #f8fafd;
+  padding: 20px 10px;
+  border-right: 1px solid #ddd;
+}
+
+.right-panel {
+  flex: 4;
+
+  background-color: rgb(230, 237, 248);
 }
 </style>
