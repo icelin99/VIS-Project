@@ -82,10 +82,12 @@ results = {
     '国家与类型交叉分布': cross
 }
 
-type_counts.to_csv('data_analysis/type_counts.csv', index=False)
-country_counts.to_csv('data_analysis/country_counts.csv', index=False)
-edge_type_counts.to_csv('data_analysis/edge_type_counts.csv', index=False)
-top_in.to_csv('data_analysis/top_in.csv', index=False)
-top_out.to_csv('data_analysis/top_out.csv', index=False)
-df_pr.to_csv('data_analysis/top_pagerank.csv', index=False)
-cross.to_csv('data_analysis/country_type_cross.csv', index=False)
+print(results)
+
+# type_counts.to_csv('data_analysis/type_counts.csv', index=False)
+# country_counts.to_csv('data_analysis/country_counts.csv', index=False)
+# edge_type_counts.to_csv('data_analysis/edge_type_counts.csv', index=False)
+# top_in.to_csv('data_analysis/top_in.csv', index=False)
+# top_out.to_csv('data_analysis/top_out.csv', index=False)
+# df_pr.to_csv('data_analysis/top_pagerank.csv', index=False)
+# cross.to_csv('data_analysis/country_type_cross.csv', index=False)
