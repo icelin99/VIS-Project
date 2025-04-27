@@ -26,10 +26,8 @@ rv_hat = np.mean(list(rv_dict.values()))
 nbr1 = {}
 nbr2 = {}
 for u in G.nodes():
-    # 一阶
     s = set(G.successors(u)) | set(G.predecessors(u))
     nbr1[u] = s
-    # 二阶
     s2 = set()
     for v in s:
         s2 |= set(G.successors(v)) | set(G.predecessors(v))
