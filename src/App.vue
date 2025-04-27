@@ -3,7 +3,7 @@
     <div class="header-container">
       <h1 class="title">Vast Challenge 2023 MC1</h1>
       
-      <!-- 移动到右侧的选项卡导航 -->
+      <!-- 修改后的选项卡导航 -->
       <div class="tab-navigation">
         <button 
           @click="currentTab = 'forceDirected'"
@@ -16,6 +16,12 @@
           :class="{ active: currentTab === 'treeGraph' }"
         >
           Tree Graph
+        </button>
+        <button 
+          @click="currentTab = 'parallelCoordinates'"
+          :class="{ active: currentTab === 'parallelCoordinates' }"
+        >
+          Parallel Coordinates
         </button>
       </div>
     </div>
@@ -38,6 +44,12 @@
            :nodes="nodesData" />
         </div>
       </template>
+
+      <template v-else-if="currentTab === 'parallelCoordinates'">
+        <div class="full-panel">
+          <ParallelCoordinates :nodes="coefData" />
+        </div>
+      </template>
     </div>
   </div>
 </template>
@@ -46,20 +58,24 @@
 import FilterPanel from './components/FilterPanel.vue'
 import ForceDirectedGraph from './components/FDG.vue'
 import NetworkGraph from './components/NetworkGraph.vue'
+import ParallelCoordinates from './components/ParallelCoordinates.vue'
 import linksData from './assets/tree_relation.json'
 import nodesData from './assets/tree_nodes.json'
+import coefData from './assets/nodes_coef.json'
 
 export default {
   name: 'App',
   components: {
     FilterPanel,
     ForceDirectedGraph,
-    NetworkGraph
+    NetworkGraph,
+    ParallelCoordinates
   },
   data() {
     return {
       linksData: linksData.links || [],
       nodesData: nodesData.nodes || [],
+      coefData: coefData.nodes || [],
       currentTab: 'forceDirected' // 默认显示Force Directed Graph
     }
   }
