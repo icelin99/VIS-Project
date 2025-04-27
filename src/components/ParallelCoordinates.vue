@@ -148,28 +148,28 @@ export default {
 
       // 最高平均值图例
       legend.append("rect")
-        .attr("x", 0)
+        .attr("x", -60)
         .attr("y", 0)
         .attr("width", 15)
         .attr("height", 15)
         .attr("fill", "#ff0000")
 
       legend.append("text")
-        .attr("x", 20)
+        .attr("x", -40)
         .attr("y", 12)
         .text(`Highest Avg: ${maxAvgNode.name} (${maxAvgNode.avg.toFixed(2)})`)
         .style("font-size", "12px")
 
       // 最低平均值图例
       legend.append("rect")
-        .attr("x", 0)
+        .attr("x", -60)
         .attr("y", 20)
         .attr("width", 15)
         .attr("height", 15)
         .attr("fill", "#00aa00")
 
       legend.append("text")
-        .attr("x", 20)
+        .attr("x", -40)
         .attr("y", 32)
         .text(`Lowest Avg: ${minAvgNode.name} (${minAvgNode.avg.toFixed(2)})`)
         .style("font-size", "12px")
