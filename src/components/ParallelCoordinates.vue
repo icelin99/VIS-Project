@@ -28,11 +28,13 @@ export default {
       this.renderChart()
     },
     renderChart() {
+      console.log("Rendering chart with nodes:", this.nodes)
       // 清除之前的图表
       d3.select(this.$refs.chartContainer).selectAll("*").remove()
       
       // 准备数据
-      const { data, minAvgNode, maxAvgNode } = this.transformData(this.nodes)
+      const nodesArray = Array.isArray(this.nodes) ? this.nodes : (this.nodes?.nodes || [])
+      const { data, minAvgNode, maxAvgNode } = this.transformData(nodesArray)
       if (!data || data.length === 0) return
 
       // 获取容器尺寸
@@ -40,12 +42,16 @@ export default {
       const width = container.clientWidth
       const height = container.clientHeight
       const margin = { top: 30, right: 100, bottom: 50, left: 60 }
+      console.log("width", width)
+      console.log("height", height)
 
       // 创建SVG
       const svg = d3.select(container)
         .append("svg")
-        .attr("width", width)
-        .attr("height", height)
+        .attr("width", "100%")
+        .attr("height", "100%")
+        .attr("viewBox", `0 0 ${width} ${height}`)
+        .attr("preserveAspectRatio", "xMidYMid meet")
 
       // 提取所有维度(节点)
       const dimensions = [...new Set(data.flatMap(d => Object.keys(d.values)))].filter(d => d !== 'name')
@@ -265,6 +271,7 @@ export default {
   watch: {
     nodes: {
       handler() {
+        console.log("get parallel nodes")
         this.renderChart()
       },
       deep: true
@@ -282,7 +289,7 @@ export default {
 .parallel-coordinates-chart {
   width: 100%;
   height: 100%;
-  min-height: 500px;
+  min-height: 200px;
   border: 1px solid #ddd;
   border-radius: 4px;
   background: white;

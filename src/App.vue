@@ -2,63 +2,43 @@
   <div id="app">
     <div class="header-container">
       <h1 class="title">Vast Challenge 2023 MC1</h1>
-      
-      <!-- 修改后的选项卡导航 -->
-      <div class="tab-navigation">
-        <button 
-          @click="currentTab = 'forceDirected'"
-          :class="{ active: currentTab === 'forceDirected' }"
-        >
-          Force Directed Graph
-        </button>
-        <button 
-          @click="currentTab = 'treeGraph'"
-          :class="{ active: currentTab === 'treeGraph' }"
-        >
-          Tree Graph
-        </button>
-        <button 
-          @click="currentTab = 'parallelCoordinates'"
-          :class="{ active: currentTab === 'parallelCoordinates' }"
-        >
-          Parallel Coordinates
-        </button>
-      </div>
     </div>
 
-    <div class="container">
-      <!-- 根据当前选项卡显示不同内容 -->
-      <template v-if="currentTab === 'forceDirected'">
-        <div class="left-panel">
-          <FilterPanel />
+    <div class="main-container">
+      <div class="left-panel">
+        <div class="left-top-container">
+          <div class="filter-panel">
+            <FilterPanel />
+          </div>
+          <div class="fdg-container">
+            <FDG />
+          </div>
         </div>
-        <div class="right-panel">
-          <ForceDirectedGraph />
+        <div class="left-bottom-container">
+          <div class="subgraphs-container">
+            <SubGraphs />
+          </div>
         </div>
-      </template>
-
-      <template v-else-if="currentTab === 'treeGraph'">
-        <div class="full-panel">
-          <NetworkGraph
-           :links="linksData"
-           :nodes="nodesData" />
+      </div>
+      <div class="right-panel">
+        <div class="network-container">
+          <NetworkGraph />
         </div>
-      </template>
-
-      <template v-else-if="currentTab === 'parallelCoordinates'">
-        <div class="full-panel">
+        <div class="parallel-container">
           <ParallelCoordinates :nodes="coefData" />
         </div>
-      </template>
+      </div>
     </div>
   </div>
 </template>
 
 <script>
 import FilterPanel from './components/FilterPanel.vue'
-import ForceDirectedGraph from './components/FDG.vue'
+import FDG from './components/FDG.vue'
+import SubGraphs from './components/SubGraphs.vue'
 import NetworkGraph from './components/NetworkGraph.vue'
 import ParallelCoordinates from './components/ParallelCoordinates.vue'
+import { useStore } from 'vuex'
 import linksData from './assets/tree_relation.json'
 import nodesData from './assets/tree_nodes.json'
 import coefData from './assets/nodes_coef.json'
@@ -66,18 +46,25 @@ import coefData from './assets/nodes_coef.json'
 export default {
   name: 'App',
   components: {
-    FilterPanel,
-    ForceDirectedGraph,
-    NetworkGraph,
-    ParallelCoordinates
-  },
-  data() {
-    return {
-      linksData: linksData.links || [],
-      nodesData: nodesData.nodes || [],
-      coefData: coefData.nodes || [],
-      currentTab: 'forceDirected' // 默认显示Force Directed Graph
+      FilterPanel,
+      FDG,
+      SubGraphs,
+      NetworkGraph,
+      ParallelCoordinates
+    },
+  setup() {
+    const store = useStore()
+    return { 
+      store,
+      linksData,
+      nodesData,
+      coefData
     }
+  },
+  async mounted() {
+    console.log('App 组件挂载，开始加载数据...')
+    await this.store.dispatch('loadData')
+    console.log('数据加载完成')
   }
 }
 </script>
@@ -112,47 +99,126 @@ export default {
   gap: 10px;
 }
 
-.tab-navigation button {
-  padding: 8px 16px;
-  border: none;
-  background-color: rgba(255, 255, 255, 0.2);
-  color: white;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border-radius: 4px;
-}
-
-.tab-navigation button:hover {
-  background-color: rgba(255, 255, 255, 0.3);
-}
-
-.tab-navigation button.active {
-  background-color: white;
-  color: #2c3e50;
-  font-weight: bold;
-}
-
-.container {
+.main-container {
   display: flex;
-  min-height: calc(100vh - 60px); /* 只减去标题高度 */
+  gap: 10px;
+  background-color: #e6effe;
+  height: calc(100vh - 60px); /* 减去header高度 */
+  padding: 10px;
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .left-panel {
-  flex: 1;
-  background-color: #f8fafd;
-  padding: 20px 10px;
-  border-right: 1px solid #ddd;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  width: 68%;
+  height: 100%;
+}
+
+.left-top-container {
+  display: flex;
+  flex-direction: row; /* 横向排列 */
+  gap: 10px;
+  height: 70%; /* 占83%高度 */
+}
+
+.left-bottom-container {
+  height: 30%; /* 占17%高度 */
+}
+
+.filter-panel {
+  background: white;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  width: calc(30% - 20px); /* filter panel占left-top的30% */
+  height: calc(100% - 30px);
+}
+
+.fdg-container {
+  background: white;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  width: calc(70% - 20px); /* filter panel占left-top的30% */
+  height: calc(100% - 30px);
+}
+
+.subgraphs-container {
+  background: white;
+  border-radius: 4px;
+  width: calc(100% - 5px); /* filter panel占left-top的30% */
+  height: calc(100% - 5px);
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+
 }
 
 .right-panel {
-  flex: 4;
-  background-color: rgb(230, 237, 248);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 32%;
+  height: 100%;
 }
 
-.full-panel {
+.network-container {
+  flex: 1;
+  background: white;
+  border-radius: 4px;
+  border-radius: 8px;
+  padding: 10px;
+  width: calc(100% - 30px); /* filter panel占left-top的30% */
+  height: calc(100% - 30px);
+}
+
+.parallel-container {
+  background: white;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  flex: 1;
+  width: calc(100% - 30px); /* filter panel占left-top的30% */
+  height: calc(100% - 30px);
+}
+
+/* 确保所有容器内的组件能填充整个空间 */
+.filter-panel > *,
+.fdg-container > *,
+.subgraphs-container > *,
+.network-container > *,
+.parallel-container > * {
   width: 100%;
-  background-color: rgb(230, 237, 248);
+  height: 100%;
+}
+
+/* 确保subgraphs中的每个子图都能正确显示 */
+.subgraph {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.content-wrapper h2 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 18px;
+  text-align: left;
+}
+
+.content-placeholder {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  font-size: 16px;
+  background: #f8f9fa;
+  border-radius: 4px;
   padding: 20px;
-  box-sizing: border-box;
 }
 </style>
