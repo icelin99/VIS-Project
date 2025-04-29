@@ -348,7 +348,7 @@ export default {
 .network-graph {
   flex-grow: 1;
   width: 100%;
-  height: calc(100% - 60px);
+  height: 100%;
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 4px 6px rgba(0,0,0,0.05);

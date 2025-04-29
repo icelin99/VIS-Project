@@ -1,335 +1,335 @@
 <template>
-  <div class="parallel-coordinates-container">
-    <div ref="chartContainer" class="parallel-coordinates-chart"></div>
-  </div>
+<div class="parallel-coordinates-container">
+  <div ref="chartContainer" class="scatter-plot"></div>
+</div>
 </template>
 
 <script>
 import * as d3 from 'd3'
+import { mapState } from 'vuex'
+import coefData from '@/assets/nodes_coef.json'
 
 export default {
-  name: 'ParallelCoordinates',
-  props: {
-    nodes: {
-      type: Array,
-      required: true
-    }
-  },
-  mounted() {
-    this.renderChart()
-    window.addEventListener('resize', this.handleResize)
-  },
-  beforeUnmount() {
-    window.removeEventListener('resize', this.handleResize)
-    d3.select(".tooltip").remove()
-  },
-  methods: {
-    handleResize() {
-      this.renderChart()
-    },
-    renderChart() {
-      console.log("Rendering chart with nodes:", this.nodes)
-      // 清除之前的图表
-      d3.select(this.$refs.chartContainer).selectAll("*").remove()
-      
-      // 准备数据
-      const nodesArray = Array.isArray(this.nodes) ? this.nodes : (this.nodes?.nodes || [])
-      const { data, minAvgNode, maxAvgNode } = this.transformData(nodesArray)
-      if (!data || data.length === 0) return
-
-      // 获取容器尺寸
-      const container = this.$refs.chartContainer
-      const width = container.clientWidth
-      const height = container.clientHeight
-      const margin = { top: 30, right: 100, bottom: 50, left: 60 }
-      console.log("width", width)
-      console.log("height", height)
-
-      // 创建SVG
-      const svg = d3.select(container)
-        .append("svg")
-        .attr("width", "100%")
-        .attr("height", "100%")
-        .attr("viewBox", `0 0 ${width} ${height}`)
-        .attr("preserveAspectRatio", "xMidYMid meet")
-
-      // 提取所有维度(节点)
-      const dimensions = [...new Set(data.flatMap(d => Object.keys(d.values)))].filter(d => d !== 'name')
-      
-      // 创建比例尺
-      const x = d3.scalePoint()
-        .domain(dimensions)
-        .range([margin.left, width - margin.right])
-        .padding(0.5)
-
-      const y = d3.scaleLinear()
-        .domain([0, 1]) // 假设value范围是0-1
-        .range([height - margin.bottom, margin.top])
-
-      // 添加坐标轴
-      svg.append("g")
-        .attr("transform", `translate(0,${height - margin.bottom})`)
-        .call(d3.axisBottom(x))
-        .selectAll("text")
-          .style("text-anchor", "end")
-          .attr("dx", "-.8em")
-          .attr("dy", ".15em")
-          .attr("transform", "rotate(-45)")
-
-      svg.append("g")
-        .attr("transform", `translate(${margin.left},0)`)
-        .call(d3.axisLeft(y))
-
-      // 添加标题
-      svg.append("text")
-        .attr("x", width / 2)
-        .attr("y", margin.top / 2)
-        .attr("text-anchor", "middle")
-        .text("Node Relationships Parallel Coordinates")
-        .style("font-size", "16px")
-        .style("font-weight", "bold")
-
-      // 创建折线生成器
-      const line = d3.line()
-        .defined(d => !isNaN(d.value))
-        .x(d => x(d.dimension))
-        .y(d => y(d.value))
-
-      // 绘制折线
-      svg.selectAll(".line")
-        .data(data)
-        .enter()
-        .append("path")
-        .attr("class", "line")
-        .attr("d", d => line(dimensions.map(dim => ({
-          dimension: dim,
-          value: d.values[dim] || 0
-        }))))
-        .attr("stroke", d => {
-          if (d.name === maxAvgNode.name) return "#ff0000" // 最高平均值标红
-          if (d.name === minAvgNode.name) return "#00aa00" // 最低平均值标绿
-          return "#999999" // 其余灰色
-        })
-        .attr("stroke-width", d => {
-          if (d.name === maxAvgNode.name || d.name === minAvgNode.name) return 2
-          return 1
-        })
-        .attr("fill", "none")
-        .attr("opacity", d => {
-          if (d.name === maxAvgNode.name || d.name === minAvgNode.name) return 0.9
-          return 0.4
-        })
-        .on("mouseover", (event, d) => {  // 改为箭头函数以保持this上下文
-            d3.select(event.currentTarget)
-                .attr("stroke-width", 3)
-                .attr("opacity", 1)
-          
-          // 显示详细相关性列表
-          const tooltipContent = this.generateTooltipContent(d, dimensions)
-          tooltip.style("visibility", "visible")
-            .html(tooltipContent)
-        })
-        .on("mouseout", function() {
-          d3.select(this)
-            .attr("stroke-width", d => {
-              if (d.name === maxAvgNode.name || d.name === minAvgNode.name) return 2
-              return 1
-            })
-            .attr("opacity", d => {
-              if (d.name === maxAvgNode.name || d.name === minAvgNode.name) return 0.9
-              return 0.4
-            })
-          
-          tooltip.style("visibility", "hidden")
-        })
-        .on("mousemove", function(event) {
-          tooltip
-            .style("top", (event.pageY - 10) + "px")
-            .style("left", (event.pageX + 10) + "px")
-        })
-
-      // 添加图例
-      const legend = svg.append("g")
-        .attr("transform", `translate(${width - margin.right + 10}, ${margin.top})`)
-
-      // 最高平均值图例
-      legend.append("rect")
-        .attr("x", -60)
-        .attr("y", 0)
-        .attr("width", 15)
-        .attr("height", 15)
-        .attr("fill", "#ff0000")
-
-      legend.append("text")
-        .attr("x", -40)
-        .attr("y", 12)
-        .text(`Highest Avg: ${maxAvgNode.name} (${maxAvgNode.avg.toFixed(2)})`)
-        .style("font-size", "12px")
-
-      // 最低平均值图例
-      legend.append("rect")
-        .attr("x", -60)
-        .attr("y", 20)
-        .attr("width", 15)
-        .attr("height", 15)
-        .attr("fill", "#00aa00")
-
-      legend.append("text")
-        .attr("x", -40)
-        .attr("y", 32)
-        .text(`Lowest Avg: ${minAvgNode.name} (${minAvgNode.avg.toFixed(2)})`)
-        .style("font-size", "12px")
-
-      // 添加tooltip
-      const tooltip = d3.select("body").append("div")
-        .attr("class", "tooltip")
-        .style("position", "absolute")
-        .style("visibility", "hidden")
-        .style("background", "white")
-        .style("border", "1px solid #ddd")
-        .style("padding", "10px")
-        .style("border-radius", "5px")
-        .style("pointer-events", "none")
-        .style("box-shadow", "0 0 10px rgba(0,0,0,0.2)")
-        .style("max-width", "300px")
-    },
-    transformData(nodes) {
-      // 将原始数据转换为平行坐标格式
-      const nodeMap = {}
-      
-      // 首先收集所有节点
-      nodes.forEach(node => {
-        if (!nodeMap[node.name]) {
-          nodeMap[node.name] = {
-            name: node.name,
-            values: {},
-            sum: 0,
-            count: 0
-          }
-        }
-        if (node.target) {
-          nodeMap[node.name].values[node.target] = node.value
-          nodeMap[node.name].sum += node.value
-          nodeMap[node.name].count++
-        }
-      })
-
-      // 确保每个节点都有所有其他节点的值(默认为0)
-      const allNodes = Object.keys(nodeMap)
-      allNodes.forEach(nodeName => {
-        allNodes.forEach(otherNode => {
-          if (nodeName !== otherNode && !nodeMap[nodeName].values[otherNode]) {
-            nodeMap[nodeName].values[otherNode] = 0
-          }
-        })
-        // 计算平均值
-        nodeMap[nodeName].avg = nodeMap[nodeName].count > 0 ? 
-          nodeMap[nodeName].sum / nodeMap[nodeName].count : 0
-      })
-
-      // 找出平均值最高和最低的节点
-      const nodeList = Object.values(nodeMap)
-      let maxAvgNode = nodeList[0]
-      let minAvgNode = nodeList[0]
-      
-      nodeList.forEach(node => {
-        if (node.avg > maxAvgNode.avg) maxAvgNode = node
-        if (node.avg < minAvgNode.avg) minAvgNode = node
-      })
-
-      return {
-        data: nodeList,
-        minAvgNode,
-        maxAvgNode
-      }
-    },
-    generateTooltipContent(node, dimensions) {
-      // 生成详细的tooltip内容
-      let content = `<div class="tooltip-header">
-        <strong>${node.name}</strong> (Avg: ${node.avg.toFixed(2)})
-      </div>
-      <div class="tooltip-body">
-        <table>
-          <tr>
-            <th>Target Node</th>
-            <th>Value</th>
-          </tr>`
-      
-      dimensions.sort((a, b) => node.values[b] - node.values[a])
-        .forEach(dim => {
-          content += `<tr>
-            <td>${dim}</td>
-            <td>${node.values[dim].toFixed(2)}</td>
-          </tr>`
-        })
-      
-      content += `</table></div>`
-      
-      return content
-    }
-  },
-  watch: {
-    nodes: {
-      handler() {
-        console.log("get parallel nodes")
-        this.renderChart()
-      },
-      deep: true
-    }
+name: 'ParallelCoordinates',
+data() {
+  return {
+    coefData: coefData
   }
+},
+computed: {
+  ...mapState(['selectedNodeId']),
+},
+mounted() {
+  this.renderChart()
+  window.addEventListener('resize', this.handleResize)
+},
+beforeUnmount() {
+  window.removeEventListener('resize', this.handleResize)
+},
+methods: {
+  createTopTenScale(data, topItems, range) {
+    const maxNormalValue = d3.max(
+      data.filter(d => !topItems.some(top => top === d))
+    )
+    
+    return d3.scaleLinear()
+      .domain([0, maxNormalValue, d3.max(data)])
+      .range([
+        range[0], 
+        range[0] + (range[1] - range[0]) * 0.8, 
+        range[1]
+      ])
+      .clamp(true)
+  },
+
+  renderChart() {
+    const data = this.coefData
+    if (!data || data.length === 0) return
+
+    d3.select(this.$refs.chartContainer).selectAll("*").remove()
+
+    // 找出top 10数据
+    // 使用原始 ID 而不是索引
+    const topRaw = data
+      .map((d, index) => ({ ...d, originalIndex: index }))
+      .sort((a, b) => b.raw_score - a.raw_score)
+      .slice(0, 10)
+      .map(d => d.id)  // 使用原始 ID
+    
+    const topNorm = data
+      .map((d, index) => ({ ...d, originalIndex: index }))
+      .sort((a, b) => b.norm_score - a.norm_score)
+      .slice(0, 10)
+      .map(d => d.id)  // 使用原始 ID
+
+    const container = this.$refs.chartContainer
+    const width = container.clientWidth || 800
+    const height = container.clientHeight || 600
+    const margin = { top: 60, right: 60, bottom: 10, left: 60 }
+
+    const svg = d3.select(container)
+      .append("svg")
+      .attr("width", width)
+      .attr("height", height)
+      .style("background", "#f9f9f9")
+
+    const rawScores = data.map(d => d.raw_score)
+    const normScores = data.map(d => d.norm_score)
+
+    // 创建特殊的比例尺
+    const yRaw = this.createTopTenScale(
+      rawScores, 
+      topRaw.map(id => data.find(d => d.id === id).raw_score), 
+      [height - margin.bottom, margin.top]
+    )
+
+    const yNorm = this.createTopTenScale(
+      normScores, 
+      topNorm.map(id => data.find(d => d.id === id).norm_score), 
+      [height - margin.bottom, margin.top]
+    )
+
+    const x = d3.scalePoint()
+      .domain(data.map(d => d.id))  // 使用原始 ID 作为域
+      .range([margin.left, width - margin.right])
+
+    // 颜色比例尺
+    const color = d3.scaleOrdinal()
+      .domain(["normal", "top-raw", "top-norm"])
+      .range(["#999", "#ff4d4d", "#4daf4d"])
+
+    // 绘制连接线
+    svg.selectAll(".connection-line")
+      .data(data)
+      .enter()
+      .append("line")
+      .attr("data-id", d => String(d.id))  // 使用原始 ID 
+      .attr("x1", d => x(d.id))
+      .attr("y1", d => yRaw(d.raw_score))
+      .attr("x2", d => x(d.id))
+      .attr("y2", d => yNorm(d.norm_score))
+      .attr("stroke", d => {
+        if (topRaw.includes(d.id) || topNorm.includes(d.id)) return color("top-raw")
+        return "#ddd"
+      })
+      .attr("stroke-width", 1)
+      .attr("opacity", 0.5)
+
+    
+
+    // 绘制Norm Score点
+    svg.selectAll(".dot-norm")
+      .data(data)
+      .enter()
+      .append("circle")
+      .attr("class", "dot-norm")
+      .attr("data-id", d => String(d.id))  // 使用原始 ID 
+      .attr("cx", d => x(d.id))
+      .attr("cy", d => yNorm(d.norm_score))
+      .attr("r", 1)
+      .attr("fill", d => {
+        if (topNorm.includes(d.id)) return color("top-norm")
+        return color("normal")
+      })
+      .attr("opacity", 0.7)
+
+    // 绘制Raw Score点
+    svg.selectAll(".dot-raw")
+      .data(data)
+      .enter()
+      .append("circle")
+      .attr("class", "dot-raw")
+      .attr("data-id", d => String(d.id))  // 使用原始 ID 
+      .attr("cx", d => x(d.id))
+      .attr("cy", d => yRaw(d.raw_score))
+      .attr("r", d => {
+        return topRaw.includes(d.id) ? 2 : 1
+      })
+      .attr("fill", d => {
+        if (topRaw.includes(d.id)) return color("top-raw")
+        return color("normal")
+      })
+      .attr("opacity", 0.7)  
+
+
+    // 坐标轴
+    const axisColor = "#666"
+    svg.append("g")
+      .attr("transform", `translate(${margin.left},0)`)
+      .call(d3.axisLeft(yRaw).ticks(5))
+      .call(g => g.select(".domain").attr("stroke", axisColor))
+      .call(g => g.selectAll(".tick line").attr("stroke", axisColor))
+      .call(g => g.selectAll(".tick text").attr("fill", axisColor))
+      .append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("y", -40)
+        .attr("x", -height/2)
+        .attr("text-anchor", "middle")
+        .text("Raw Score")
+        .style("fill", axisColor)
+
+    svg.append("g")
+      .attr("transform", `translate(${width - margin.right},0)`)
+      .call(d3.axisRight(yNorm).ticks(5))
+      .call(g => g.select(".domain").attr("stroke", axisColor))
+      .call(g => g.selectAll(".tick line").attr("stroke", axisColor))
+      .call(g => g.selectAll(".tick text").attr("fill", axisColor))
+      .append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 40)
+        .attr("x", -height/2)
+        .attr("text-anchor", "middle")
+        .text("Normalized Score")
+        .style("fill", axisColor)
+
+    // 图例
+    const legend = svg.append("g")
+      .attr("transform", `translate(${width - margin.right + 10}, ${margin.top})`)
+
+    // Top Raw Score图例
+    legend.append("circle")
+      .attr("cx", -width*2/3+30)
+      .attr("cy", -height/10)
+      .attr("r", 3)
+      .attr("fill", color("top-raw"))
+
+    legend.append("text")
+      .attr("x", -width*2/3+10+30)
+      .attr("y", -height/10+4)
+      .text("Top 10 Points")
+      .style("font-size", "10px")
+
+    // Top Norm Score图例
+    legend.append("circle")
+      .attr("cx", -width*1/3+30)
+      .attr("cy", -height/10)
+      .attr("r", 3)
+      .attr("fill", color("normal"))
+
+    legend.append("text")
+      .attr("x", -width*1/3+10+30)
+      .attr("y", -height/10+4)
+      .text("Other points")
+      .style("font-size", "10px")
+  },
+
+  highlightNode(newId) {
+    const svg = d3.select(this.$refs.chartContainer).select("svg")
+    
+    // 移除之前的文本框
+    svg.selectAll(".node-info-box").remove()
+
+    const nodeData = this.coefData.find(d => String(d.id) === String(newId))
+    
+    if (!nodeData) return
+
+    // // 重置所有元素样式
+    // svg.selectAll("[data-id]")
+    //   .each(function() {
+    //     const el = d3.select(this)
+        
+    //     if (el.classed('dot-raw') || el.classed('dot-norm')) {
+    //       el.attr("r", 1)
+    //         .attr("fill", "#999")
+    //         .attr("opacity", 0.5)
+    //     }
+
+    //     if (el.classed('connection-line')) {
+    //       el.attr("stroke", "#ddd")
+    //         .attr("stroke-width", 1)
+    //         .attr("opacity", 0.3)
+    //     }
+    //   })
+
+    // 只选择第一个匹配的点
+    const matchedElement = svg.selectAll(`[data-id="${newId}"].dot-raw, [data-id="${newId}"].dot-norm`)
+      .filter(function(d, i) {
+        return i === 0;  // 只选择第一个元素
+      })
+
+    if (matchedElement.empty()) return
+
+    // 高亮选中元素
+    matchedElement
+      .attr("r", 4)
+      .attr("fill", "#40E0D0")
+      .attr("opacity", 1)
+
+    // 找到对应的连接线
+    const connectedLine = svg.select(`[data-id="${newId}"].connection-line`)
+    if (!connectedLine.empty()) {
+      connectedLine
+        .attr("stroke", "#40E0D0")
+        .attr("stroke-width", 2)
+        .attr("opacity", 1)
+    }
+
+    // 创建文本框
+    const x = parseFloat(matchedElement.attr('cx'))
+    const y = parseFloat(matchedElement.attr('cy'))
+
+    const infoBox = svg.append('g')
+      .attr('class', 'node-info-box')
+      .attr('transform', `translate(${x + 10}, ${y - 40})`)
+
+    // 背景矩形
+    infoBox.append('rect')
+      .attr('width', 130)
+      .attr('height', 70)
+      .attr('fill', 'white')
+      .attr('stroke', '#333')
+      .attr('stroke-width', 1)
+      .attr('rx', 5)
+      .attr('ry', 5)
+      .attr('opacity', 0.6)
+
+    // 文本内容
+    const textData = [
+      `ID: ${nodeData.id}`,
+      `Raw Score: ${nodeData.raw_score.toFixed(2)}`,
+      `Norm Score: ${nodeData.norm_score.toFixed(2)}`
+    ]
+
+    infoBox.selectAll('text')
+      .data(textData)
+      .enter()
+      .append('text')
+      .attr('x', 10)
+      .attr('y', (d, i) => 20 + i * 18)
+      .attr('font-size', '10px')
+      .text(d => d)
+  }
+
+
+
+
+
+},
+
+// 监听 Vuex store 中的选中节点变化
+watch: {
+  selectedNodeId: {
+    handler(newId) {
+      const stringId = String(newId)
+      this.highlightNode(stringId)
+    },
+    immediate: true
+  }
+}
 }
 </script>
 
 <style scoped>
 .parallel-coordinates-container {
-  width: 100%;
-  height: 100%;
+width: 100%;
+height: 100%;
 }
 
-.parallel-coordinates-chart {
-  width: 100%;
-  height: 100%;
-  min-height: 200px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background: white;
-}
-</style>
-
-<style>
-/* 全局tooltip样式 */
-.tooltip {
-  font-family: Arial, sans-serif;
-  font-size: 12px;
-  z-index: 100;
-}
-
-.tooltip-header {
-  font-size: 14px;
-  font-weight: bold;
-  margin-bottom: 8px;
-  color: #333;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 5px;
-}
-
-.tooltip-body table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.tooltip-body th {
-  text-align: left;
-  background-color: #f5f5f5;
-  padding: 3px 8px;
-}
-
-.tooltip-body td {
-  padding: 3px 8px;
-  border-bottom: 1px solid #eee;
-}
-
-.tooltip-body tr:hover td {
-  background-color: #f9f9f9;
+.scatter-plot {
+width: 100%;
+height: 100%;
+border: 1px solid #ddd;
+border-radius: 1px;
+background: white;
 }
 </style>
