@@ -21,10 +21,10 @@
         </div>
       </div>
       <div class="right-panel">
-        <div class="network-container">
+        <div class="network-wrapper">
           <NetworkGraph />
         </div>
-        <div class="parallel-container">
+        <div class="parallel-wrapper">
           <ParallelCoordinates :nodes="coefData" />
         </div>
       </div>
@@ -165,17 +165,16 @@ export default {
   height: 100%;
 }
 
-.network-container {
+.network-wrapper {
   flex: 1;
   background: white;
   border-radius: 4px;
-  border-radius: 8px;
   padding: 10px;
-  width: calc(100% - 30px); /* filter panel占left-top的30% */
+  width: calc(100% - 20px); /* filter panel占left-top的30% */
   height: calc(100% - 30px);
 }
 
-.parallel-container {
+.parallel-wrapper {
   background: white;
   border-radius: 8px;
   padding: 15px;

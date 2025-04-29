@@ -252,7 +252,74 @@ export default {
                     .style('fill', 'none')
                     .style('stroke', d => d.weight > 0.99 ? '#FF0000' : this.linkColors[type])
                     .style('stroke-opacity', d => d.weight > 0.99 ? 0.8 : 0.6)
-                    .style('stroke-width', d => d.weight > 0.99 ? d.weight * 3 : d.weight * 1.5)
+                    .style('stroke-width', d => {
+                        // 根据weight值计算线条宽度
+                        if (d.weight > 0.99) {
+                            return 3;  // 最大权重固定宽度
+                        } else if (d.weight > 0.7) {
+                            return 2.5;  // 较高权重
+                        } else if (d.weight > 0.4) {
+                            return 2;  // 中等权重
+                        } else if (d.weight > 0.2) {
+                            return 1.5;  // 较低权重
+                        }
+                        return 1;  // 最低权重
+                    })
+                    .on('mouseover', (event, d) => {
+                        // 高亮当前边
+                        d3.select(event.target)
+                            .transition()
+                            .duration(200)
+                            .style('stroke-opacity', 1)
+                            .style('stroke-width', d => d.weight > 0.99 ? d.weight * 4 : d.weight * 2);
+
+                        // 高亮相连节点
+                        container.selectAll('.node')
+                            .filter(node => node.id === d.source.id || node.id === d.target.id)
+                            .each((node, i, elements) => {
+                                const el = d3.select(elements[i]);
+                                el.select('circle')
+                                    .transition()
+                                    .duration(200)
+                                    .attr('r', node => radiusScale(node.linkCount) * 1.5);
+                            });
+
+                        // 显示tooltip
+                        const tooltip = d3.select('#subgraph-tooltip');
+                        tooltip.style('display', 'block')
+                            .html(`
+                                <div class="tooltip-content">
+                                    <div data-label="Source">source: ${d.source.id}</div>
+                                    <div data-label="Target">target: ${d.target.id}</div>
+                                    <div data-label="Type">type: ${d.type || 'Unknown'}</div>
+                                    <div data-label="Weight">weight: ${d.weight?.toFixed(4) || 'N/A'}</div>
+                                </div>
+                            `)
+                            .style('left', (event.pageX + 10) + 'px')
+                            .style('top', (event.pageY - 10) + 'px');
+                    })
+                    .on('mouseout', (event, d) => {
+                        // 恢复边的样式
+                        d3.select(event.target)
+                            .transition()
+                            .duration(200)
+                            .style('stroke-opacity', d => d.weight > 0.99 ? 0.8 : 0.6)
+                            .style('stroke-width', d => d.weight > 0.99 ? d.weight * 3 : d.weight * 1.5);
+
+                        // 恢复节点样式
+                        container.selectAll('.node')
+                            .filter(node => node.id === d.source.id || node.id === d.target.id)
+                            .each((node, i, elements) => {
+                                const el = d3.select(elements[i]);
+                                el.select('circle')
+                                    .transition()
+                                    .duration(200)
+                                    .attr('r', node => radiusScale(node.linkCount));
+                            });
+
+                        // 隐藏tooltip
+                        d3.select('#subgraph-tooltip').style('display', 'none');
+                    });
 
                 // 创建节点组
                 const nodeGroups = container.selectAll('.node')
@@ -260,40 +327,69 @@ export default {
                     .enter()
                     .append('g')
                     .attr('class', 'node')
-                    .attr('transform', d => `translate(${d.x}, ${d.y})`)
+                    .attr('transform', d => `translate(${d.x}, ${d.y})`);
 
                 // 添加节点圆圈
                 nodeGroups.append('circle')
                     .attr('r', d => radiusScale(d.linkCount))
                     .style('fill', d => this.typeColors[d.type])
                     .style('stroke', '#fff')
-                    .style('stroke-width', '1.5px')
-
-                // 添加节点标签
-                // nodeGroups.append('text')
-                //     .text(d => d.id)
-                //     .attr('dx', 8)
-                //     .attr('dy', '.35em')
-                //     .style('font-size', '8px')
-                //     .style('pointer-events', 'none')
-
-                // 不需要保存模拟器引用，因为我们不使用力导向
-                this.simulations[type] = null
+                    .style('stroke-width', '1.5px');
 
                 // 添加交互效果
                 nodeGroups
-                    .on('mouseover', function() {
-                        d3.select(this).select('circle')
+                    .on('mouseover', (event, d) => {
+                        // 高亮当前节点
+                        const currentNode = d3.select(event.currentTarget);
+                        currentNode.select('circle')
                             .transition()
                             .duration(200)
-                            .attr('r', d => radiusScale(d.linkCount) * 1.5)
-                    })
-                    .on('mouseout', function() {
-                        d3.select(this).select('circle')
+                            .attr('r', d => radiusScale(d.linkCount) * 1.5);
+
+                        // 高亮相关连接
+                        container.selectAll('.link')
+                            .filter(link => link.source.id === d.id || link.target.id === d.id)
                             .transition()
                             .duration(200)
-                            .attr('r', d => radiusScale(d.linkCount))
+                            .style('stroke-opacity', 1)
+                            .style('stroke-width', link => link.weight > 0.99 ? link.weight * 4 : link.weight * 2);
+
+                        // 显示tooltip
+                        const tooltip = d3.select('#subgraph-tooltip');
+                        tooltip.style('display', 'block')
+                            .html(`
+                                <div class="tooltip-content">
+                                    <div data-label="ID">id: ${d.id}</div>
+                                    <div data-label="Type">type: ${d.type || 'Unknown'}</div>
+                                    <div data-label="Country">country: ${d.country || 'N/A'}</div>
+                                    <div data-label="Connections">connections: ${d.linkCount}</div>
+                                </div>
+                            `)
+                            .style('left', (event.pageX + 10) + 'px')
+                            .style('top', (event.pageY - 10) + 'px');
                     })
+                    .on('mouseout', (event, d) => {
+                        // 恢复节点样式
+                        const currentNode = d3.select(event.currentTarget);
+                        currentNode.select('circle')
+                            .transition()
+                            .duration(200)
+                            .attr('r', d => radiusScale(d.linkCount));
+
+                        // 恢复连接样式
+                        container.selectAll('.link')
+                            .filter(link => link.source.id === d.id || link.target.id === d.id)
+                            .transition()
+                            .duration(200)
+                            .style('stroke-opacity', d => d.weight > 0.99 ? 0.8 : 0.6)
+                            .style('stroke-width', d => d.weight > 0.99 ? d.weight * 3 : d.weight * 1.5);
+
+                        // 隐藏tooltip
+                        d3.select('#subgraph-tooltip').style('display', 'none');
+                    });
+
+                // 不需要保存模拟器引用，因为我们不使用力导向
+                this.simulations[type] = null
             })
         }
     },
@@ -320,13 +416,49 @@ export default {
         },
         selectedNodeId: {
             handler(newId) {
-                // 更新所有子图中的节点样式
+                // 更新所有子图中的节点和边的样式
                 Object.values(this.svgs).forEach(svg => {
+                    // 更新节点样式
                     svg.selectAll('.node circle')
                         .transition()
                         .duration(200)
                         .style('stroke', d => d.id === newId ? '#FF0000' : '#fff')
                         .style('stroke-width', d => d.id === newId ? 4 : 1.5);
+
+                    // 更新边的样式
+                    svg.selectAll('.link')
+                        .transition()
+                        .duration(200)
+                        .style('stroke-opacity', d => {
+                            const isConnected = d.source.id === newId || d.target.id === newId;
+                            if (isConnected) {
+                                return d.weight > 0.99 ? 1 : 0.9;
+                            }
+                            return d.weight > 0.99 ? 0.8 : 0.6;
+                        })
+                        .style('stroke', d => {
+                            const isConnected = d.source.id === newId || d.target.id === newId;
+                            if (!isConnected) {
+                                return d.weight > 0.99 ? '#FF0000' : this.linkColors[d.type];
+                            }
+                            // 高亮时使用加深的颜色
+                            switch(d.type) {
+                                case 'membership':
+                                    return '#6982B0';  // 加深的蓝灰色
+                                case 'partnership':
+                                    return '#5A8D6A';  // 加深的绿色
+                                case 'ownership':
+                                    return '#8B6BA8';  // 加深的紫色
+                                case 'family_relationship':
+                                    return '#8B7355';  // 加深的棕色
+                                default:
+                                    return '#666666';
+                            }
+                        })
+                        .style('stroke-width', d => {
+                            const isConnected = d.source.id === newId || d.target.id === newId;
+                            return isConnected ? (d.weight > 0.99 ? d.weight * 3 : d.weight * 2) : (d.weight > 0.99 ? d.weight * 3 : d.weight * 1.5);
+                        });
                 });
             }
         }
@@ -399,21 +531,37 @@ svg {
 #subgraph-tooltip {
     position: absolute;
     display: none;
-    background: rgba(255, 255, 255, 0.95);
+    background: rgba(255, 255, 255, 0.98);
     border: 1px solid #ddd;
     border-radius: 4px;
-    padding: 10px;
+    padding: 6px 10px;
     font-size: 12px;
+    font-family: Arial, sans-serif;
     pointer-events: none;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
     z-index: 1000;
+    width: auto;
+    height: auto;
+    white-space: nowrap;
 }
 
 .tooltip-content {
-    line-height: 1.5;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
 }
 
 .tooltip-content div {
-    margin: 2px 0;
+    display: flex;
+    gap: 8px;
+    padding: 1px 0;
+    white-space: nowrap;
+}
+
+.tooltip-content div::before {
+    content: attr(data-label);
+    color: #666;
+    font-weight: 500;
+    min-width: 70px;
 }
 </style> 

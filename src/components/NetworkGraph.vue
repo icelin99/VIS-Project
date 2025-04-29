@@ -315,7 +315,7 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 15px;
+  padding: 5px;
   background: linear-gradient(to right, #f5f7fa, #e4e8eb);
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
   margin-bottom: 10px;

@@ -263,7 +263,7 @@ export default {
                     d3.select('#graph-tooltip').style('display', 'none');
                 });
 
-            // 创建节点组
+            // 修改节点组创建
             const nodes = container.selectAll('.node')
                 .data(data_nodes)
                 .enter()
@@ -273,7 +273,16 @@ export default {
                     .on('start', this.dragStarted)
                     .on('drag', this.dragged)
                     .on('end', this.dragEnded))
-                .on('click', this.handleNodeClick);  // 添加点击事件
+                .on('click', this.handleNodeClick)
+                .on('dblclick', (event, d) => {  // 修改双击事件
+                    event.preventDefault();
+                    const cycles = this.findCycles(d.id);
+                    if (cycles.length > 0) {
+                        this.highlightCycles(cycles, d.id);
+                    } else {
+                        this.clearHighlights();
+                    }
+                });
 
             // 添加节点圆圈
             nodes.append('circle')
@@ -404,6 +413,150 @@ export default {
         handleNodeClick(event, d) {
             // 提交选中的节点ID
             this.$store.commit('setSelectedNodeId', d.id);
+            
+            // 高亮相关连接
+            const container = this.svg.select('.graph-container');
+            
+            // 高亮相连的边
+            container.selectAll('.link')
+                .transition()
+                .duration(200)
+                .style('stroke-opacity', link => 
+                    (link.source.id === d.id || link.target.id === d.id) 
+                    ? (link.weight > 0.99 ? 1 : 0.8)  // 相连的边更不透明
+                    : (link.weight > 0.99 ? 0.8 : 0.3) // 其他边保持原样
+                )
+                .style('stroke-width', link => {
+                    if (link.source.id === d.id || link.target.id === d.id) {
+                        return link.weight > 0.99 ? link.weight * 6 : link.weight * 4;  // 相连的边更粗
+                    }
+                    return link.weight > 0.99 ? link.weight * 4 : link.weight * 2;  // 其他边保持原样
+                });
+        },
+        // 添加环路检测方法
+        findCycles(startNodeId) {
+            const visited = new Set();
+            const cycles = [];
+            const path = [];
+            const pathSet = new Set();
+            
+            // 构建邻接表
+            const adjList = new Map();
+            this.filteredLinks.forEach(link => {
+                if (!adjList.has(link.source.id)) {
+                    adjList.set(link.source.id, []);
+                }
+                if (!adjList.has(link.target.id)) {
+                    adjList.set(link.target.id, []);
+                }
+                adjList.get(link.source.id).push({
+                    node: link.target.id,
+                    link: link
+                });
+                adjList.get(link.target.id).push({
+                    node: link.source.id,
+                    link: link
+                });
+            });
+
+            const dfs = (nodeId, parent) => {
+                visited.add(nodeId);
+                path.push(nodeId);
+                pathSet.add(nodeId);
+
+                const neighbors = adjList.get(nodeId) || [];
+                for (const neighbor of neighbors) {
+                    if (neighbor.node === parent) continue;
+
+                    if (pathSet.has(neighbor.node)) {
+                        // 找到环
+                        const cycleStart = path.indexOf(neighbor.node);
+                        const cycle = path.slice(cycleStart);
+                        cycle.push(neighbor.node); // 完成环
+                        cycles.push(cycle);
+                    } else if (!visited.has(neighbor.node)) {
+                        dfs(neighbor.node, nodeId);
+                    }
+                }
+
+                path.pop();
+                pathSet.delete(nodeId);
+            };
+
+            dfs(startNodeId, null);
+            return cycles;
+        },
+
+        // 高亮环路上的节点和边
+        highlightCycles(cycles, clickedNodeId) {
+            const container = this.svg.select('.graph-container');
+            const cycleNodes = new Set(cycles.flat());
+            const cycleEdges = new Set();
+
+            // 先重置所有节点和边的样式
+            container.selectAll('.node circle')
+                .transition()
+                .duration(200)
+                .style('stroke', '#fff')
+                .style('stroke-width', 1.5);
+
+            container.selectAll('.link')
+                .transition()
+                .duration(200)
+                .style('stroke-opacity', d => d.weight > 0.99 ? 0.8 : 0.3)
+                .style('stroke-width', d => d.weight > 0.99 ? d.weight * 4 : d.weight * 2);
+
+            // 找出环路中的边
+            cycles.forEach(cycle => {
+                for (let i = 0; i < cycle.length - 1; i++) {
+                    cycleEdges.add(`${cycle[i]}-${cycle[i + 1]}`);
+                    cycleEdges.add(`${cycle[i + 1]}-${cycle[i]}`);
+                }
+            });
+
+            // 高亮节点
+            container.selectAll('.node circle')
+                .transition()
+                .duration(200)
+                .style('stroke', d => {
+                    if (d.id === clickedNodeId) return '#FF0000';  // 双击的节点用红色
+                    return cycleNodes.has(d.id) ? '#FFD700' : '#fff';  // 环路上的其他节点用黄色
+                })
+                .style('stroke-width', d => cycleNodes.has(d.id) ? 4 : 1.5);
+
+            // 高亮边
+            container.selectAll('.link')
+                .transition()
+                .duration(200)
+                .style('stroke-opacity', d => {
+                    const edgeId1 = `${d.source.id}-${d.target.id}`;
+                    const edgeId2 = `${d.target.id}-${d.source.id}`;
+                    return cycleEdges.has(edgeId1) || cycleEdges.has(edgeId2) ? 1 : 0.3;
+                })
+                .style('stroke-width', d => {
+                    const edgeId1 = `${d.source.id}-${d.target.id}`;
+                    const edgeId2 = `${d.target.id}-${d.source.id}`;
+                    return cycleEdges.has(edgeId1) || cycleEdges.has(edgeId2) ? 
+                        (d.weight > 0.99 ? d.weight * 6 : d.weight * 4) : 
+                        (d.weight > 0.99 ? d.weight * 4 : d.weight * 2);
+                });
+        },
+
+        // 清除所有高亮效果
+        clearHighlights() {
+            const container = this.svg.select('.graph-container');
+            
+            container.selectAll('.node circle')
+                .transition()
+                .duration(200)
+                .style('stroke', '#fff')
+                .style('stroke-width', 1.5);
+
+            container.selectAll('.link')
+                .transition()
+                .duration(200)
+                .style('stroke-opacity', d => d.weight > 0.99 ? 0.8 : 0.3)
+                .style('stroke-width', d => d.weight > 0.99 ? d.weight * 4 : d.weight * 2);
         }
     }
 }
