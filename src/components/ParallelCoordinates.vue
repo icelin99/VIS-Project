@@ -15,6 +15,9 @@ export default {
       required: true
     }
   },
+  computed: {
+    ...mapState(['selectedNodeId']),
+  },
   mounted() {
     this.renderChart()
     window.addEventListener('resize', this.handleResize)
@@ -275,7 +278,14 @@ export default {
         this.renderChart()
       },
       deep: true
+    },
+    selectedNodeId: {
+      handler() {
+        // todo: 选择了view a的点后要干嘛
+      },
+      immediate: true
     }
+  
   }
 }
 </script>
