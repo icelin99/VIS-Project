@@ -299,11 +299,6 @@ methods: {
       .attr('font-size', '10px')
       .text(d => d)
   }
-
-
-
-
-
 },
 
 // 监听 Vuex store 中的选中节点变化
