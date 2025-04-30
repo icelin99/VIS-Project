@@ -214,6 +214,9 @@ methods: {
   },
 
   highlightNode(newId) {
+    const data = this.coefData
+    if (!data || data.length === 0) return
+    
     const svg = d3.select(this.$refs.chartContainer).select("svg")
     
     // 移除之前的文本框
@@ -223,23 +226,43 @@ methods: {
     
     if (!nodeData) return
 
-    // // 重置所有元素样式
-    // svg.selectAll("[data-id]")
-    //   .each(function() {
-    //     const el = d3.select(this)
-        
-    //     if (el.classed('dot-raw') || el.classed('dot-norm')) {
-    //       el.attr("r", 1)
-    //         .attr("fill", "#999")
-    //         .attr("opacity", 0.5)
-    //     }
+    // 找出top 10数据
+    // 使用原始 ID 而不是索引
+    const topRaw = data
+      .map((d, index) => ({ ...d, originalIndex: index }))
+      .sort((a, b) => b.raw_score - a.raw_score)
+      .slice(0, 10)
+      .map(d => d.id)  // 使用原始 ID
 
-    //     if (el.classed('connection-line')) {
-    //       el.attr("stroke", "#ddd")
-    //         .attr("stroke-width", 1)
-    //         .attr("opacity", 0.3)
-    //     }
-    //   })
+    // 颜色比例尺
+    const color = d3.scaleOrdinal()
+      .domain(["normal", "top-raw", "top-norm"])
+      .range(["#999", "#ff4d4d", "#4daf4d"])
+
+    // 重置所有元素样式
+    svg.selectAll("[data-id]")
+      .each(function() {
+        const el = d3.select(this)
+        
+        if (el.classed('dot-raw') || el.classed('dot-norm')) {
+          el.attr("r", 1)
+            .attr("fill", "#999")
+            .attr("opacity", 0.5)
+            .attr("r", d => {
+              return topRaw.includes(d.id) ? 2 : 1
+            })
+            .attr("fill", d => {
+              if (topRaw.includes(d.id)) return color("top-raw")
+              return color("normal")
+            })
+        }
+
+        if (el.classed('connection-line')) {
+          el.attr("stroke", "#ddd")
+            .attr("stroke-width", 1)
+            .attr("opacity", 0.3)
+        }
+      })
 
     // 只选择第一个匹配的点
     const matchedElement = svg.selectAll(`[data-id="${newId}"].dot-raw, [data-id="${newId}"].dot-norm`)
@@ -265,12 +288,12 @@ methods: {
     }
 
     // 创建文本框
-    const x = parseFloat(matchedElement.attr('cx'))
-    const y = parseFloat(matchedElement.attr('cy'))
+    const bx = parseFloat(matchedElement.attr('cx'))
+    const by = parseFloat(matchedElement.attr('cy'))
 
     const infoBox = svg.append('g')
       .attr('class', 'node-info-box')
-      .attr('transform', `translate(${x + 10}, ${y - 40})`)
+      .attr('transform', `translate(${bx + 10}, ${by - 40})`)
 
     // 背景矩形
     infoBox.append('rect')
