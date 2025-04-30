@@ -54,10 +54,10 @@ export default {
     },
     watch: {
         filteredNodes: {
-            handler(newNodes) {
+        handler(newNodes) {
                 if (newNodes && newNodes.length > 0) {
-                    this.updateVisualization()
-                }
+            this.updateVisualization()
+            }
             },
             immediate: true
         },
@@ -170,7 +170,7 @@ export default {
             });
 
             const container = this.svg.select('.graph-container')
-            
+
             // 保存 this 的引用
             const self = this;
 
@@ -292,16 +292,16 @@ export default {
                 .style('stroke-width', d => d.id === this.selectedNodeId ? 3 : 1.5);  // 选中节点边框加粗
 
             // 添加节点标签
-            nodes.append('text')
-                .text(d => d.id)
-                .attr('dx', d => radiusScale(d.linkCount) + 2)
-                .attr('dy', 4)
-                .style('font-family', 'Arial, sans-serif')
-                .style('font-size', d => {
-                    // 连接数越多，文字越大
-                    const size = (d.linkCount - minLinks) / (maxLinks - minLinks) * 4 + 8;
-                    return `${size}px`;
-                });
+            // nodes.append('text')
+            //     .text(d => d.id)
+            //     .attr('dx', d => radiusScale(d.linkCount) + 2)
+            //     .attr('dy', 4)
+            //     .style('font-family', 'Arial, sans-serif')
+            //     .style('font-size', d => {
+            //         // 连接数越多，文字越大
+            //         const size = (d.linkCount - minLinks) / (maxLinks - minLinks) * 4 + 8;
+            //         return `${size}px`;
+            //     });
 
             // 添加节点的hover事件
             nodes.on('mouseover', (event, d) => {
@@ -522,7 +522,7 @@ export default {
                     if (d.id === clickedNodeId) return '#FF0000';  // 双击的节点用红色
                     return cycleNodes.has(d.id) ? '#FFD700' : '#fff';  // 环路上的其他节点用黄色
                 })
-                .style('stroke-width', d => cycleNodes.has(d.id) ? 4 : 1.5);
+                .style('stroke-width', d => cycleNodes.has(d.id) ? 2 : 1.5);
 
             // 高亮边
             container.selectAll('.link')
@@ -537,7 +537,7 @@ export default {
                     const edgeId1 = `${d.source.id}-${d.target.id}`;
                     const edgeId2 = `${d.target.id}-${d.source.id}`;
                     return cycleEdges.has(edgeId1) || cycleEdges.has(edgeId2) ? 
-                        (d.weight > 0.99 ? d.weight * 6 : d.weight * 4) : 
+                        (d.weight > 0.99 ? d.weight * 4 : d.weight * 2) : 
                         (d.weight > 0.99 ? d.weight * 4 : d.weight * 2);
                 });
         },
