@@ -37,6 +37,8 @@ export default createStore({
         async loadData({ commit, dispatch }) {
             try {
                 console.log('开始加载数据...');
+                
+                // 从public目录加载数据
                 const response = await fetch('/assets/mc1_clean.json');
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);

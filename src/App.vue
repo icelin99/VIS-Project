@@ -39,9 +39,6 @@ import SubGraphs from './components/SubGraphs.vue'
 import NetworkGraph from './components/NetworkGraph.vue'
 import ParallelCoordinates from './components/ParallelCoordinates.vue'
 import { useStore } from 'vuex'
-import linksData from './assets/tree_relation.json'
-import nodesData from './assets/tree_nodes.json'
-import coefData from './assets/nodes_coef.json'
 
 export default {
   name: 'App',
@@ -55,16 +52,19 @@ export default {
   setup() {
     const store = useStore()
     return { 
-      store,
-      linksData,
-      nodesData,
-      coefData
+      store
     }
   },
   async mounted() {
     console.log('App 组件挂载，开始加载数据...')
-    await this.store.dispatch('loadData')
-    console.log('数据加载完成')
+    try {
+      await this.store.dispatch('loadData')
+      const coefData = await fetch('/assets/nodes_coef.json');
+      this.coefData = await coefData.json();
+      console.log('数据加载完成')
+    } catch (error) {
+      console.error('数据加载失败:', error)
+    }
   }
 }
 </script>

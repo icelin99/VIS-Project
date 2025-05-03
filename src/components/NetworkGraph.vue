@@ -6,8 +6,7 @@
 
 <script>
 import * as d3 from 'd3'
-import hierarchyData from '@/assets/tree_hierarchy.json'
-import { mapState } from 'vuex'  // 添加 mapState
+import { mapState } from 'vuex'
 
 export default {
   name: 'TreeNetworkGraph',
@@ -16,7 +15,7 @@ export default {
   },
   data() {
     return {
-      hierarchyData: hierarchyData,
+      hierarchyData: null,
       levelNodeCounts: {}, // 用于记录每个层级的节点计数
       typeColors: {
         'person': '#FFB6C1',
@@ -37,8 +36,17 @@ export default {
       }
     }
   },
-  mounted() {
-    this.renderTreeGraph()
+  async mounted() {
+    try {
+      const response = await fetch('/assets/tree_hierarchy.json');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      this.hierarchyData = await response.json();
+      this.renderTreeGraph();
+    } catch (error) {
+      console.error('加载层级数据失败:', error);
+    }
   },
   methods: {
     convertToD3Hierarchy(rootNodeData) {
@@ -111,7 +119,26 @@ export default {
       d3.select(container).selectAll("*").remove()
       
       // 检查是否有选中的节点和层级数据
-      if (!this.selectedNodeId || !this.hierarchyData) return
+      if (!this.selectedNodeId || !this.hierarchyData) {
+        // 添加提示文本
+        const svg = d3.select(container)
+          .append("svg")
+          .attr("width", "100%")
+          .attr("height", "100%")
+          .style("background", "#f9f9f9")
+
+        // 添加提示文本
+        svg.append("text")
+          .attr("x", "50%")
+          .attr("y", "50%")
+          .attr("text-anchor", "middle")
+          .attr("dominant-baseline", "middle")
+          .style("font-size", "16px")
+          .style("fill", "#666")
+          .text(this.hierarchyData ? "请选择一个节点" : "正在加载数据...")
+          
+        return
+      }
 
       const rootNodeData = this.hierarchyData[this.selectedNodeId]
       if (!rootNodeData) {
@@ -130,7 +157,7 @@ export default {
           .attr("dominant-baseline", "middle")
           .style("font-size", "16px")
           .style("fill", "#666")
-          .text("There is no hierarchy data for this node")
+          .text("该节点没有层级数据")
           
         return
       }

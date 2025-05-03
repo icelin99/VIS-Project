@@ -7,20 +7,28 @@
 <script>
 import * as d3 from 'd3'
 import { mapState } from 'vuex'
-import coefData from '@/assets/nodes_coef.json'
 
 export default {
 name: 'ParallelCoordinates',
 data() {
   return {
-    coefData: coefData
+    coefData: null
   }
 },
 computed: {
   ...mapState(['selectedNodeId']),
 },
-mounted() {
-  this.renderChart()
+async mounted() {
+  try {
+    const response = await fetch('/assets/nodes_coef.json');
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    this.coefData = await response.json();
+    this.renderChart();
+  } catch (error) {
+    console.error('加载系数数据失败:', error);
+  }
   window.addEventListener('resize', this.handleResize)
 },
 beforeUnmount() {
@@ -44,7 +52,28 @@ methods: {
 
   renderChart() {
     const data = this.coefData
-    if (!data || data.length === 0) return
+    if (!data || data.length === 0) {
+      // 添加提示文本
+      const container = this.$refs.chartContainer
+      d3.select(container).selectAll("*").remove()
+      
+      const svg = d3.select(container)
+        .append("svg")
+        .attr("width", "100%")
+        .attr("height", "100%")
+        .style("background", "#f9f9f9")
+
+      svg.append("text")
+        .attr("x", "50%")
+        .attr("y", "50%")
+        .attr("text-anchor", "middle")
+        .attr("dominant-baseline", "middle")
+        .style("font-size", "16px")
+        .style("fill", "#666")
+        .text("正在加载数据...")
+      
+      return
+    }
 
     d3.select(this.$refs.chartContainer).selectAll("*").remove()
 
