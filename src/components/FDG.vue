@@ -522,7 +522,7 @@ export default {
                     if (d.id === clickedNodeId) return '#FF0000';  // 双击的节点用红色
                     return cycleNodes.has(d.id) ? '#FFD700' : '#fff';  // 环路上的其他节点用黄色
                 })
-                .style('stroke-width', d => cycleNodes.has(d.id) ? 2 : 1.5);
+                .style('stroke-width', d => cycleNodes.has(d.id) ? 3 : 1.5);
 
             // 高亮边
             container.selectAll('.link')
